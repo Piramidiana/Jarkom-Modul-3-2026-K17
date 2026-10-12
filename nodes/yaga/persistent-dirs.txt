@@ -1,0 +1,3 @@
+# Configure > Advanced > Additional directories to make persistent:
+/var/lib/mysql
+/etc/mysql

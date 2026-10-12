@@ -1,0 +1,6 @@
+# kusakabe - isi "Edit config" di GNS3 (client DHCP)
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp

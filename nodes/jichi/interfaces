@@ -1,0 +1,29 @@
+# jichi - isi "Edit config" (/etc/network/interfaces) di GNS3
+# Diterapkan dengan restart node (ifup tidak tersedia di shell).
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+    up echo nameserver 192.168.122.1 > /etc/resolv.conf
+
+auto eth1
+iface eth1 inet static
+    address 10.72.1.1
+    netmask 255.255.255.0
+
+auto eth2
+iface eth2 inet static
+    address 10.72.2.1
+    netmask 255.255.255.0
+
+auto eth3
+iface eth3 inet static
+    address 10.72.3.1
+    netmask 255.255.255.0
+
+auto eth4
+iface eth4 inet static
+    address 10.72.4.1
+    netmask 255.255.255.0
+    up bash /root/startup.sh

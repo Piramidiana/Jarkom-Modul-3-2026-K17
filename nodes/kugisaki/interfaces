@@ -1,0 +1,8 @@
+# kugisaki - isi "Edit config" di GNS3 (client DHCP, fixed address via MAC)
+# MAC dikunci ke MAC bawaan GNS3 (sebelumnya kembar dengan okkotsu: f2:dd:ec:51:c9:cb)
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+    hwaddress ether 02:42:49:6f:98:00

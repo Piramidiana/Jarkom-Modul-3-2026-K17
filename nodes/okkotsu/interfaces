@@ -1,0 +1,8 @@
+# okkotsu - isi "Edit config" di GNS3 (client DHCP)
+# MAC dikunci dengan hwaddress (MAC bawaan GNS3: 02:42:e5:5e:69:00)
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+    hwaddress ether f2:dd:ec:51:c9:cb
