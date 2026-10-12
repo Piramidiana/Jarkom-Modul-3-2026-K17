@@ -48,6 +48,9 @@ Prefix kelompok: `10.72`. Semua subnet `/24`.
 
 ### Soal 1 — Router, NAT, dan IP statis
 
+SOAL : Ketika Curtain menutup Shibuya, jalur komunikasi antar zona Jujutsu High terputus. Pulihkan konektivitas dasar dengan mengonfigurasi jichi: eth0 memperoleh WAN dari NAT, sedangkan eth1–eth4 menjadi gateway Network 1–4 sesuai tabel pemetaan. Aktifkan IPv4 forwarding dan source NAT, lalu tetapkan IP statis host infrastruktur sesuai tabel spesifikasi. Buktikan konektivitas setiap host ke gateway dan akses eksternal dari host yang relevan.
+
+
 jichi: eth0 memperoleh IP dari NAT, eth1–eth4 menjadi gateway Network 1–4. IPv4 forwarding dan source NAT (MASQUERADE) diaktifkan di `startup.sh` sehingga berlaku lagi setiap boot. Dua belas host infrastruktur diberi IP statis dengan gateway jichi.
 
 Script: `perquest-scripts/soal_1.sh`, `nodes/jichi/{interfaces,install.sh,startup.sh}`, `nodes/<host>/interfaces`.
@@ -61,6 +64,8 @@ Hasil: 12 host `OK` dari jichi. gojo → tengen TTL 63 (melewati satu router). P
 
 ### Soal 2 — DHCP Server tengen
 
+SOAL : Tengen, penjaga pusat distribusi di Data Center, harus mengambil alih pengalokasian alamat bagi wilayah yang membutuhkan konfigurasi dinamis. Konfigurasikan isc-dhcp-server pada [PREFIX IP].4.10. Deklarasikan Network 4 ([PREFIX IP].4.0/24) sebagai subnet lokal tanpa pool dinamis, lalu siapkan scope DHCP untuk Network 2 ([PREFIX IP].2.0/24) dan Network 3 ([PREFIX IP].3.0/24). Validasi konfigurasi dan pastikan service aktif tanpa error “No subnet declaration”.
+
 `isc-dhcp-server` melayani `eth0`. Network 4 dideklarasikan tanpa pool, sedangkan Network 2 dan 3 diberi scope.
 
 Script: `perquest-scripts/soal_2.sh`.
@@ -70,6 +75,8 @@ Script: `perquest-scripts/soal_2.sh`.
 Hasil: `dhcpd -t` tanpa error (tidak ada *No subnet declaration*), service running.
 
 ### Soal 3 — DHCP Relay jichi
+
+SOAL : Permintaan alamat dari Divisi A dan Divisi B tidak dapat menyeberangi subnet secara langsung. Konfigurasikan jichi sebagai DHCP Relay menuju tengen ([PREFIX IP].4.10), menggunakan eth2 untuk Network 2 dan eth3 untuk Network 3. Buktikan bahwa client dari kedua subnet berhasil memperoleh lease melalui relay.
 
 Relay meneruskan permintaan dari eth2 (Network 2) dan eth3 (Network 3) ke `10.72.4.10`. eth4 ikut didaftarkan agar balasan dari tengen diterima. Debian trixie tidak menyediakan `/etc/init.d/isc-dhcp-relay`, sehingga `dhcrelay` dijalankan langsung dengan nilai dari `/etc/default/isc-dhcp-relay`.
 
@@ -81,6 +88,7 @@ Script: `perquest-scripts/soal_3.sh`.
 Hasil: itadori memperoleh 10.72.2.10 dan ino 10.72.3.10, keduanya tercatat di `dhcpd.leases` tengen.
 
 ### Soal 4 — Dua pool Network 2
+SOAL : Agar tim Dev dan Support di Divisi A menerima jatah alamat yang berbeda, atur dua pool DHCP pada Network 2. Tetapkan Pool 1 ([PREFIX IP].2.10–[PREFIX IP].2.35) untuk itadori dan fushiguro, serta Pool 2 ([PREFIX IP].2.70–[PREFIX IP].2.95) untuk zenin dan okkotsu. Rentang [PREFIX IP].2.36–[PREFIX IP].2.69 tidak boleh dialokasikan. Karena seluruh client berada pada subnet yang sama, gunakan DHCP class berdasarkan MAC Address atau Client ID untuk memisahkan kedua kelompok
 
 Class berdasarkan MAC: `divA-dev` (itadori, fushiguro) → Pool 1, `divA-support` (zenin, okkotsu) → Pool 2. Rentang .2.36–.2.69 tidak pernah ditulis sebagai range. MAC okkotsu dikunci dengan `hwaddress ether` di network config-nya.
 
@@ -93,6 +101,7 @@ Script: `perquest-scripts/soal_4.sh`.
 Hasil: itadori .2.10, fushiguro .2.11 (Pool 1); zenin dan okkotsu pindah ke .2.70/.2.71 (Pool 2).
 
 ### Soal 5 — Short/long lease, DNS, domain-search
+SOAL : Setiap tim lapangan memiliki durasi operasi yang berbeda. Pada Network 3, berikan short lease 30 menit (1800 detik) kepada ino dan kusakabe, serta long lease 12 jam (43200 detik) kepada miwa. Gunakan pool short lease [PREFIX IP].3.10–[PREFIX IP].3.89 dan pool long lease [PREFIX IP].3.100–[PREFIX IP].3.199. Sesuaikan default-lease-time dan max-lease-time untuk setiap kelas client. Berikan pula DHCP options berupa DNS [PREFIX IP].1.2 dan [PREFIX IP].1.3, serta domain-search <xxxx>.com.
 
 Class `divB-short` (ino, kusakabe) 1800 detik di .3.10–.3.89, `divB-long` (miwa) 43200 detik di .3.100–.3.199. Opsi global: DNS 10.72.1.2 dan 10.72.1.3, `domain-name` dan `domain-search` `K17.com`. udhcpc tidak meminta opsi 119, sehingga tengen dipaksa selalu mengirimnya (`dhcp-parameter-request-list` + `77`).
 
@@ -105,6 +114,7 @@ Script: `perquest-scripts/soal_5.sh`.
 Hasil: ino/kusakabe `lease time 1800`, miwa `lease time 43200` di 10.72.3.100, resolv.conf berisi `search K17.com` dan dua nameserver.
 
 ### Soal 6 — Fixed address kugisaki
+SOAL : Kugisaki ditetapkan sebagai personel VIP yang harus mempertahankan alamat yang sama setiap kali terhubung. Buat DHCP static lease berdasarkan MAC Address client tersebut dengan fixed address [PREFIX IP].3.99. Pastikan alamat ini berada di luar seluruh pool dinamis, validasi konfigurasi server, lalu renew lease pada client. Buktikan bahwa alamat yang diterima sesuai dengan reservasi.
 
 `host kugisaki` dengan MAC 02:42:49:6f:98:00 → 10.72.3.99, di luar semua pool. MAC kugisaki semula kembar dengan okkotsu, sehingga dikunci ke MAC bawaan GNS3 dengan `hwaddress`.
 
@@ -116,6 +126,7 @@ Script: `perquest-scripts/soal_6.sh` (dijalankan setelah `soal_5.sh`).
 Hasil: setelah restart kugisaki langsung mendapat 10.72.3.99, gateway 10.72.3.1, dan `search K17.com`.
 
 ### Soal 7 — Audit client
+SOAL : Setelah aturan alokasi diterapkan, pastikan setiap client menerima konfigurasi jaringan sesuai wilayahnya: subnet mask 255.255.255.0 (/24), gateway dan broadcast address yang benar, DNS [PREFIX IP].1.2 serta [PREFIX IP].1.3, dan domain-search yang ditentukan. Periksa IP address dan routing seluruh client Divisi A dan Divisi B, kemudian cocokkan lease dengan /var/lib/dhcp/dhcpd.leases pada tengen. Pastikan tidak ada alamat yang bertabrakan atau berada di luar kebijakan pool.
 
 Script: `perquest-scripts/soal_7.sh`.
 
@@ -132,6 +143,7 @@ Script: `perquest-scripts/soal_7.sh`.
 Semua client menerima mask /24, DNS 10.72.1.2 dan 10.72.1.3, serta `search K17.com`. Lease di tengen cocok dengan MAC client, tidak ada IP kembar, dan tidak ada IP di luar pool. Fixed address tidak tercatat di `dhcpd.leases`.
 
 ### Soal 8 — Capture DORA
+SOAL : Sebelum Curtain dibuka kembali, buktikan bahwa proses pemberian alamat berjalan sesuai protokol. Lakukan packet capture saat salah satu client Network 2 atau Network 3 meminta lease baru. Gunakan tcpdump pada tengen atau jalur menuju Data Center untuk menunjukkan urutan DHCPDISCOVER → DHCPOFFER → DHCPREQUEST → DHCPACK. Identifikasi alamat server, alamat yang diberikan, lease time, dan field giaddr. Pastikan nilai giaddr sesuai dengan interface jichi yang menerima request dari subnet client.
 
 `tcpdump -l -i eth0 -n -vvv 'udp port 67 or udp port 68'` di tengen saat itadori meminta lease. Capture lengkap ada di `artefacts/soal8_dora.txt`.
 
@@ -149,6 +161,7 @@ Script: `perquest-scripts/soal_8.sh`.
 | giaddr | 10.72.2.1 (jichi eth2) |
 
 ### Soal 9 — Gangguan relay
+SOAL : Sebuah gangguan memutus jalur relay dan membuat permintaan alamat tidak sampai ke Data Center. Hentikan service DHCP Relay pada jichi, lalu paksa salah satu client di Network 2 atau Network 3 meminta lease baru dan catat gejalanya. Pulihkan service relay, ulangi permintaan DHCP, lalu buktikan bahwa client kembali memperoleh alamat dari pool yang benar dengan gateway semula.
 
 Script: `perquest-scripts/soal_9.sh`.
 
@@ -158,6 +171,7 @@ Script: `perquest-scripts/soal_9.sh`.
 Saat relay dimatikan, fushiguro mengirim DISCOVER tiga kali lalu `no lease, failing`, tanpa IPv4 dan tanpa default route. Setelah relay dinyalakan, fushiguro kembali mendapat 10.72.2.11 (Pool 1) dengan gateway 10.72.2.1.
 
 ### Soal 10 — Autostart
+SOAL : Setelah gangguan Shibuya tertangani, pastikan pemulihan bertahan setelah restart. Aktifkan autostart DHCP Server pada tengen dan DHCP Relay pada jichi, lalu restart kedua node. Verifikasi status layanan, IP, gateway, lease, dan konektivitas client Network 2–3. Pastikan kebijakan Pool 1, Pool 2, short lease, long lease, dan fixed address tetap berlaku.
 
 `startup.sh` dipanggil dari baris `up` di network config. jichi: ip_forward, NAT, install ulang dhcrelay bila hilang, jalankan relay. tengen: install ulang dhcpd bila hilang, set `INTERFACESv4`, jalankan `soal_5.sh` dan `soal_6.sh`.
 
@@ -174,6 +188,8 @@ Hasil: setelah kedua node di-restart, relay dan dhcpd berjalan tanpa perintah ma
 _Diisi Jude._
 
 ### Soal 13 — Replikasi MariaDB
+SOAL : Kepala Sekolah Yaga dan Inumaki mendirikan database terpusat yang redundan agar log aktivitas kutukan tetap aman tersimpan. Konfigurasikan MariaDB pada yaga sebagai DB-Master dan inumaki sebagai DB-Slave. Buat database db_shibuya_<xxxx> beserta tabel request_logs di Master, aktifkan binary logging (log-bin, server-id), lalu hubungkan inumaki sebagai Slave yang menyalin data secara realtime dengan CHANGE MASTER TO. Berikan hak akses remote bagi seluruh node di Network 4, lalu buktikan replikasi berhasil dengan memasukkan data baru di Master dan memeriksa hasilnya di Slave.
+
 
 yaga (master): `server-id=1`, `log-bin`, `bind-address=0.0.0.0`, database `db_shibuya_K17`, tabel `request_logs`, user replikasi `repl@10.72.4.12`, user aplikasi `k17@10.72.4.%`. inumaki (slave): `server-id=2`, `read_only`, `CHANGE MASTER TO` dari `mysql-bin.000001` posisi 4. Folder `/var/lib/mysql` dan `/etc/mysql` dibuat persisten di GNS3.
 
