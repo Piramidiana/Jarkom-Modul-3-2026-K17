@@ -190,7 +190,8 @@ SOAL : Konfigurasi Utahime sebagai DNS Master untuk domain jujutsu.K17.com agar 
 Solusi : Utahime dikonfigurasi menggunakan BIND9 sebagai DNS Master dengan zone jujutsu.K17.com. File zone dikonfigurasi untuk mengatur A record domain utama ke IP Gojo (10.72.4.21).
 Script : /root/soal_11.sh (di Utahime), /etc/bind/named.conf.local, /etc/bind/jujutsu.k17.com
 
-<img width="736" height="402" alt="3_11_FIX BENER ITADORI" src="https://github.com/user-attachments/assets/759c4b2a-9c96-4bfd-80f7-f12fee464ff0" />
+<img width="788" height="431" alt="3_11_FIX ITADORI" src="https://github.com/user-attachments/assets/4bdf9552-accc-4cc2-8853-32b872893210" />
+
 
 
 expected output yang muncul : Hasil uji ping jujutsu.K17.com atau host jujutsu.K17.com dari client berhasil me-resolve ke alamat IP Gojo (10.72.4.21).
@@ -200,14 +201,23 @@ SOAL : Konfigurasi Shoko sebagai DNS Slave untuk domain jujutsu.K17.com sebagai 
 Solusi : Utahime dikonfigurasi untuk mengizinkan transfer zone (allow-transfer) ke IP Shoko. Shoko dikonfigurasi menggunakan BIND9 bertipe slave yang mengambil data zone dari master (Utahime).
 Script : /root/soal_12.sh (di Utahime & Shoko), /etc/bind/named.conf.local (di Shoko)
 
-[screenshoot]
+<img width="747" height="274" alt="3_12_ItadoriDIG" src="https://github.com/user-attachments/assets/b550db92-3d07-478c-8a3f-b8b09e801bbc" />
 
-[screenshoot]
+<img width="803" height="235" alt="3_12_ItadoriDIG2" src="https://github.com/user-attachments/assets/039c8924-1612-413c-aa68-894d7fc1609b" />
+
+<img width="661" height="128" alt="3_12_ItadoriDIG3" src="https://github.com/user-attachments/assets/cf86ebde-21e6-4625-809f-f37f1d8b7ef3" />
+
 
 expected output yang muncul : Saat service bind9 di Utahime dimatikan secara paksa, client tetap berhasil melakukan resolve domain jujutsu.K17.com melalui Shoko yang mengambil alih proses DNS query.
 
 ### Soal 13 — Replikasi MariaDB
 SOAL : Kepala Sekolah Yaga dan Inumaki mendirikan database terpusat yang redundan agar log aktivitas kutukan tetap aman tersimpan. Konfigurasikan MariaDB pada yaga sebagai DB-Master dan inumaki sebagai DB-Slave. Buat database db_shibuya_<xxxx> beserta tabel request_logs di Master, aktifkan binary logging (log-bin, server-id), lalu hubungkan inumaki sebagai Slave yang menyalin data secara realtime dengan CHANGE MASTER TO. Berikan hak akses remote bagi seluruh node di Network 4, lalu buktikan replikasi berhasil dengan memasukkan data baru di Master dan memeriksa hasilnya di Slave.
+
+<img width="658" height="143" alt="3_13_Inumaki sinkron dengan yaga" src="https://github.com/user-attachments/assets/c07ad313-9277-4340-a1e9-141c0b17ef51" />
+
+<img width="922" height="131" alt="3_13_Yaga" src="https://github.com/user-attachments/assets/dbbc5b69-bdd7-48b2-bbf5-52b25623155a" />
+
+<img width="674" height="523" alt="3_13_YES INUMAKI" src="https://github.com/user-attachments/assets/a6ef4e70-a601-4c3a-988b-adabf65e5690" />
 
 
 yaga (master): `server-id=1`, `log-bin`, `bind-address=0.0.0.0`, database `db_shibuya_K17`, tabel `request_logs`, user replikasi `repl@10.72.4.12`, user aplikasi `k17@10.72.4.%`. inumaki (slave): `server-id=2`, `read_only`, `CHANGE MASTER TO` dari `mysql-bin.000001` posisi 4. Folder `/var/lib/mysql` dan `/etc/mysql` dibuat persisten di GNS3.
