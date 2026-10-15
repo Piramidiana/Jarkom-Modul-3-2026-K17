@@ -190,9 +190,8 @@ SOAL : Konfigurasi Utahime sebagai DNS Master untuk domain jujutsu.K17.com agar 
 Solusi : Utahime dikonfigurasi menggunakan BIND9 sebagai DNS Master dengan zone jujutsu.K17.com. File zone dikonfigurasi untuk mengatur A record domain utama ke IP Gojo (10.72.4.21).
 Script : /root/soal_11.sh (di Utahime), /etc/bind/named.conf.local, /etc/bind/jujutsu.k17.com
 
-[screenshoot]
+<img width="736" height="402" alt="3_11_FIX BENER ITADORI" src="https://github.com/user-attachments/assets/759c4b2a-9c96-4bfd-80f7-f12fee464ff0" />
 
-[screenshoot]
 
 expected output yang muncul : Hasil uji ping jujutsu.K17.com atau host jujutsu.K17.com dari client berhasil me-resolve ke alamat IP Gojo (10.72.4.21).
 
