@@ -185,7 +185,7 @@ Hasil: setelah kedua node di-restart, relay dan dhcpd berjalan tanpa perintah ma
 
 ### Soal 11–12 — DNS (Jude)
 
-Soal 11 — DNS Master
+### Soal 11 — DNS Master
 SOAL : Konfigurasi Utahime sebagai DNS Master untuk domain jujutsu.K17.com agar dapat mengarahkan lalu lintas dari jaringan klien menuju public load balancer (Gojo).
 Solusi : Utahime dikonfigurasi menggunakan BIND9 sebagai DNS Master dengan zone jujutsu.K17.com. File zone dikonfigurasi untuk mengatur A record domain utama ke IP Gojo (10.72.4.21).
 Script : /root/soal_11.sh (di Utahime), /etc/bind/named.conf.local, /etc/bind/jujutsu.k17.com
@@ -196,7 +196,7 @@ Script : /root/soal_11.sh (di Utahime), /etc/bind/named.conf.local, /etc/bind/ju
 
 expected output yang muncul : Hasil uji ping jujutsu.K17.com atau host jujutsu.K17.com dari client berhasil me-resolve ke alamat IP Gojo (10.72.4.21).
 
-Soal 12 — DNS Slave
+### Soal 12 — DNS Slave
 SOAL : Konfigurasi Shoko sebagai DNS Slave untuk domain jujutsu.K17.com sebagai server cadangan apabila DNS Master (Utahime) mengalami kegagalan/mati.
 Solusi : Utahime dikonfigurasi untuk mengizinkan transfer zone (allow-transfer) ke IP Shoko. Shoko dikonfigurasi menggunakan BIND9 bertipe slave yang mengambil data zone dari master (Utahime).
 Script : /root/soal_12.sh (di Utahime & Shoko), /etc/bind/named.conf.local (di Shoko)
@@ -224,7 +224,7 @@ Hasil: `Slave_IO_Running` dan `Slave_SQL_Running` Yes. Baris yang dimasukkan di 
 
 ### Soal 14–20 — Web, Load Balancer, Proxy (Jude)
 
-Soal 14 — Nginx Web, API Workers, dan Access Control
+### Soal 14 — Nginx Web, API Workers, dan Access Control
 SOAL : Siapkan worker Web (Maki, Panda) untuk melayani halaman HTML dan worker API (Nanami, Todo, Kirara) untuk melayani JSON dan terhubung ke database. Blokir akses langsung dari client ke worker; hanya Load Balancer (Gojo/Geto) yang diizinkan mengakses worker secara langsung.
 Solusi : Maki dan Panda diinstal Nginx statis. Nanami, Todo, dan Kirara diinstal Nginx + PHP-FPM untuk merender JSON yang menyimpan log ke DB Yaga (db_shibuya_K17). Nginx pada semua worker dipasang aturan allow <subnet_Gojo_Geto>; deny all; agar klien tidak bisa melalukan bypass proksi.
 Script : /root/soal_14.sh di setiap worker (Maki, Panda, Nanami, Todo, Kirara).
@@ -235,7 +235,7 @@ Script : /root/soal_14.sh di setiap worker (Maki, Panda, Nanami, Todo, Kirara).
 
 expected output yang muncul : Klien (Itadori) yang mencoba curl langsung ke IP Worker mendapatkan error 403 Forbidden. Namun jika diakses dengan benar melalui proxy, API mengembalikan JSON dengan parameter worker yang sesuai.
 
-Soal 15 — Internal Load Balancer API
+### Soal 15 — Internal Load Balancer API
 SOAL : Konfigurasi Geto sebagai internal load balancer yang membagi lalu lintas request secara proporsional ke API worker (Nanami dan Todo) dengan rasio beban 3:1.
 Solusi : Geto dipasang Nginx sebagai Reverse Proxy. Blok upstream api_cluster dibuat dengan mengarahkan traffic ke IP Nanami menggunakan atribut weight=3 dan ke IP Todo menggunakan atribut weight=1.
 Script : /root/soal_15.sh (di Geto), /etc/nginx/conf.d/geto-upstream.conf
@@ -246,7 +246,7 @@ Script : /root/soal_15.sh (di Geto), /etc/nginx/conf.d/geto-upstream.conf
 
 expected output yang muncul : Ketika dilakukan looping request puluhan kali dari client (Itadori), hasil perhitungan log menunjukkan respons dikembalikan oleh Nanami sekitar 3 kali lebih banyak daripada Todo (misal: 30 Nanami, 10 Todo).
 
-Soal 16 — Public Reverse Proxy & Path-Based Routing
+### Soal 16 — Public Reverse Proxy & Path-Based Routing
 SOAL : Konfigurasi Gojo sebagai gerbang utama (Public Reverse Proxy) untuk melayani klien. Terapkan Path-Based Routing di mana akses ke path / (root) diarahkan ke cluster Web (Maki/Panda) dan path /api diarahkan ke internal LB (Geto).
 Solusi : Gojo dipasang Nginx. Dua blok location dikonfigurasi: location / melakukan proxy_pass ke upstream Web Cluster, dan location /api/ melakukan proxy_pass ke IP Geto.
 Script : /root/soal_16.sh (di Gojo), konfigurasi server block Nginx di Gojo.
@@ -257,7 +257,7 @@ Script : /root/soal_16.sh (di Gojo), konfigurasi server block Nginx di Gojo.
 
 expected output yang muncul : Client mengeksekusi curl [http://jujutsu.K17.com/](http://jujutsu.K17.com/) merespons isi HTML statis. Sementara curl [http://jujutsu.K17.com/api](http://jujutsu.K17.com/api) merespons output JSON dari backend.
 
-Soal 17 — Real IP Forwarding & Security Headers
+### Soal 17 — Real IP Forwarding & Security Headers
 SOAL : Pastikan IP asli klien diteruskan dari Gojo ke Geto hingga ke API Worker sehingga log database mencatat IP klien yang sebenarnya. Cegah manipulasi (spoofing) IP dari klien dengan mengabaikan header injeksi dari luar.
 Solusi : Gojo menginjeksi header X-Real-IP dan menimpa X-Forwarded-For. Geto menggunakan modul Nginx set_real_ip_from agar menerima IP klien asli dari Gojo dan meneruskannya lagi. API Worker melakukan hal serupa dari Geto.
 Script : /root/soal_17.sh (di Gojo, Geto, Nanami, Todo).
@@ -268,7 +268,7 @@ Script : /root/soal_17.sh (di Gojo, Geto, Nanami, Todo).
 
 expected output yang muncul : Hasil akses dari Itadori memunculkan properti JSON client_ip: 10.72.2.10 (IP asli). Saat Itadori mencoba spoofing (curl -H "X-Forwarded-For: 1.1.1.1"), nilai client_ip tetap kebal dan mencatat IP 10.72.2.10 yang sah, lalu tersimpan aman di log database.
 
-Soal 18 — Failover API Worker
+### Soal 18 — Failover API Worker
 SOAL : Konfigurasi Kirara sebagai worker cadangan. Jika Nanami dan Todo down secara bersamaan, traffic langsung dialihkan ke Kirara tanpa menampilkan error 502 Bad Gateway ke pengguna.
 Solusi : Pada konfigurasi upstream di Geto, Kirara (10.72.4.33) ditambahkan dengan atribut backup. Modul proxy_next_upstream dikonfigurasi untuk langsung melempar traffic yang gagal di primary worker (error/timeout) ke worker backup.
 Script : /root/soal_18.sh (di Geto), snippet proxy_next_upstream Nginx.
@@ -279,7 +279,7 @@ Script : /root/soal_18.sh (di Geto), snippet proxy_next_upstream Nginx.
 
 expected output yang muncul : Saat service Nginx/PHP-FPM di Nanami dan Todo dimatikan manual, request dari Itadori tidak menerima status HTTP 502. Klien menerima status 200 OK dengan properti JSON "worker":"Kirara". Ketika primary dinyalakan lagi, rasio otomatis normal ke Nanami/Todo.
 
-Soal 19 — Proxy Cache & Rate Limiting
+### Soal 19 — Proxy Cache & Rate Limiting
 SOAL : Kurangi beban load balancer dengan mengaktifkan proxy cache (durasi 10 menit) di Gojo untuk endpoint Web. Terapkan Rate Limiting pada endpoint /api untuk mencegah DDoS, maksimal 10 request per detik (r/s).
 Solusi : Direktori /var/cache/nginx/gojo dikonfigurasi menggunakan proxy_cache_valid 200 10m untuk path /. Limitasi dibuat dengan zone $binary_remote_addr dengan parameter rate=10r/s burst=5 nodelay pada path /api.
 Script : /root/soal_19.sh (di Gojo).
@@ -290,7 +290,7 @@ Script : /root/soal_19.sh (di Gojo).
 
 expected output yang muncul : Curl pertama ke URL statis menghasilkan header X-Cache-Status: MISS, sedangkan akses kedua menghasilkan HIT. Saat client melakukan looping request cepat ke /api, hanya sebagian awal yang berhasil (200), sisanya ditolak dan menghasilkan respons HTTP 429 Too Many Requests yang juga terbukti tercatat di error.log Gojo sebagai limiting requests.
 
-Soal 20 — Pengujian Kapasitas (Apache Benchmark)
+### Soal 20 — Pengujian Kapasitas (Apache Benchmark)
 SOAL : Lakukan audit beban menggunakan Apache Benchmark (ab) dari Kusakabe dengan parameter -n 600 -c 30. Catat performa RPS dan Latensi untuk endpoint web (/) lalu bandingkan efek rate limiting ketika menguji endpoint API (/api). Bedakan jenis kegagalan melalui akses log Gojo.
 Solusi : Kusakabe dipasang modul apache2-utils. Skenario A (Web) dieksekusi, menghasilkan beban yang semuanya ditangani oleh Cache Gojo. Skenario B (API) dieksekusi dan bertabrakan dengan sistem pembatasan Rate Limit Nginx. Log Gojo diringkas menggunakan script log_summary.sh dengan manipulasi awk/grep.
 Script : /root/soal_20.sh (di Kusakabe, instalasi ab) dan /root/log_summary.sh (di Gojo).
