@@ -1,16 +1,10 @@
-#!/bin/bash
-# Rekap Konfigurasi Praktikum - Soal 12 (A Record, CNAME, PTR, Forwarder & Recursion)
-# Domain: jujutsu.K17.com
-# ====================================================================
-
-# ==========================================
 # 1. NODE UTAHIME (DNS MASTER)
-# ==========================================
+
 echo "==> Mengonfigurasi File Master Zone (A Record & CNAME)..."
 nano /etc/bind/jujutsu/jujutsu.K17.com
-# ==========================================
+
 # ISI NANO /etc/bind/jujutsu/jujutsu.K17.com:
-# ==========================================
+
 $TTL    604800
 @       IN      SOA     ns1.jujutsu.K17.com. admin.jujutsu.K17.com. (
                               2023102603 ; Serial
@@ -30,9 +24,9 @@ test    IN      A       192.168.100.100
 
 echo "==> Mendaftarkan Reverse Zone ke named.conf.local..."
 nano /etc/bind/named.conf.local
-# ==========================================
+
 # TAMBAHKAN DI FILE NANO /etc/bind/named.conf.local:
-# ==========================================
+
 zone "1.87.10.in-addr.arpa" {
     type master;
     file "/etc/bind/jujutsu/10.72.1.rev";
@@ -40,9 +34,9 @@ zone "1.87.10.in-addr.arpa" {
 
 echo "==> Membuat File Reverse Zone (PTR)..."
 nano /etc/bind/jujutsu/10.72.1.rev
-# ==========================================
+
 # ISI NANO /etc/bind/jujutsu/10.72.1.rev:
-# ==========================================
+
 $TTL    604800
 @       IN      SOA     ns1.jujutsu.K17.com. admin.jujutsu.K17.com. (
                               2023102601 ; Serial
@@ -58,9 +52,9 @@ $TTL    604800
 
 echo "==> Mengonfigurasi DNS Forwarder dan Izin Recursion..."
 nano /etc/bind/named.conf.options
-# ==========================================
+
 # ISI NANO /etc/bind/named.conf.options:
-# ==========================================
+
 options {
     directory "/var/cache/bind";
 
@@ -83,9 +77,9 @@ echo "==> Me-restart Layanan BIND9..."
 service named restart
 
 
-# ==========================================
+
 # 2. NODE ITADORI (CLIENT / PENGUJIAN)
-# ==========================================
+
 # (Dijalankan manual di itadori)
 
 # Pastikan DNS resolver client mengarah ke utahime
