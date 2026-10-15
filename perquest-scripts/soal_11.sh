@@ -1,11 +1,5 @@
-#!/bin/bash
-# Rekap Konfigurasi Praktikum - Soal 11 (DNS Master & Slave)
-# Domain: jujutsu.K17.com
-# ====================================================================
-
-# ==========================================
 # 1. NODE JICHI (ROUTER & NAT)
-# ==========================================
+
 # Aktifkan IP Forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
@@ -22,9 +16,9 @@ ip addr add 10.72.2.1/24 dev eth2
 ip link set eth2 up
 
 
-# ==========================================
+
 # 2. NODE UTAHIME (DNS MASTER)
-# ==========================================
+
 # Konfigurasi Default Route dan DNS Resolver agar bisa internetan
 ip route add default via 10.72.1.1
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
@@ -36,9 +30,9 @@ apt-get install bind9 bind9utils dnsutils -y
 
 # Edit Konfigurasi Master Zone
 nano /etc/bind/named.conf.local
-# ==========================================
+
 # ISI NANO /etc/bind/named.conf.local (utahime):
-# ==========================================
+
 zone "jujutsu.K17.com" {
     type master;
     file "/etc/bind/jujutsu/jujutsu.K17.com";
@@ -49,9 +43,9 @@ zone "jujutsu.K17.com" {
 # Membuat direktori dan file record zone Master
 mkdir -p /etc/bind/jujutsu
 nano /etc/bind/jujutsu/jujutsu.K17.com
-# ==========================================
+
 # ISI NANO /etc/bind/jujutsu/jujutsu.K17.com:
-# ==========================================
+
 $TTL    604800
 @       IN      SOA     ns1.jujutsu.K17.com. admin.jujutsu.17.com. (
                               2023102602 ; Serial (Sengaja dinaikkan untuk test sinkronisasi)
@@ -72,9 +66,9 @@ test    IN      A       192.168.100.100
 service named restart
 
 
-# ==========================================
+
 # 3. NODE SHOKO (DNS SLAVE)
-# ==========================================
+
 # Konfigurasi Default Route dan DNS Resolver agar bisa internetan
 ip route add default via 10.72.1.1
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
@@ -85,9 +79,9 @@ apt-get install bind9 bind9utils dnsutils -y
 
 # Edit Konfigurasi Slave Zone
 nano /etc/bind/named.conf.local
-# ==========================================
+
 # ISI NANO /etc/bind/named.conf.local (shoko):
-# ==========================================
+
 zone "jujutsu.K17.com" {
     type slave;
     file "/var/lib/bind/jujutsu.K17.com";
@@ -98,9 +92,9 @@ zone "jujutsu.K17.com" {
 service named restart
 
 
-# ==========================================
+
 # 4. NODE ITADORI (CLIENT / PENGUJIAN)
-# ==========================================
+
 # Konfigurasi IP Address dan Routing Client
 ip addr add 10.72.2.2/24 dev eth0
 ip link set eth0 up
