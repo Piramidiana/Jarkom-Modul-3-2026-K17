@@ -5,7 +5,7 @@
 | Nama | NRP | Nomor |
 | --- | --- | --- |
 | Dian Piramidiana Rachmatika | 5027251031 | 1–10, 13 |
-| Jude Athala Yazid sari| | 11-20 |
+| Jude Athala Yazid sari| 5027251098 | 11-20 |
 
 ## Struktur Repo
 
