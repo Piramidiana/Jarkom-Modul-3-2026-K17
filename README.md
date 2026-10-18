@@ -5,7 +5,7 @@
 | Nama | NRP | Nomor |
 | --- | --- | --- |
 | Dian Piramidiana Rachmatika | 5027251031 | 1–10, 13 |
-| Jude | _(isi NRP)_ | 11, 12, 14–20 |
+| Jude Athala Yazid sari| | 11-20 |
 
 ## Struktur Repo
 
@@ -248,8 +248,6 @@ Setelah insert uji di Yaga, query di Inumaki diharapkan menemukan baris `replica
 <img width="674" height="523" alt="3_13_YES INUMAKI" src="https://github.com/user-attachments/assets/a6ef4e70-a601-4c3a-988b-adabf65e5690" />
 
 
-
-
 Script: `perquest-scripts/soal_13.sh`, `nodes/yaga/soal_13_master.sh`, `nodes/inumaki/soal_13_slave.sh`.
 
 ![Master](assets/JARKOM%233_13_master-status.png)
@@ -261,82 +259,148 @@ Hasil: `Slave_IO_Running` dan `Slave_SQL_Running` Yes. Baris yang dimasukkan di 
 
 ### Soal 14–20 — Web, Load Balancer, Proxy (Jude)
 
-### Soal 14 — Nginx Web, API Workers, dan Access Control
-SOAL : Siapkan worker Web (Maki, Panda) untuk melayani halaman HTML dan worker API (Nanami, Todo, Kirara) untuk melayani JSON dan terhubung ke database. Blokir akses langsung dari client ke worker; hanya Load Balancer (Gojo/Geto) yang diizinkan mengakses worker secara langsung.
-Solusi : Maki dan Panda diinstal Nginx statis. Nanami, Todo, dan Kirara diinstal Nginx + PHP-FPM untuk merender JSON yang menyimpan log ke DB Yaga (db_shibuya_K17). Nginx pada semua worker dipasang aturan allow <subnet_Gojo_Geto>; deny all; agar klien tidak bisa melalukan bypass proksi.
-Script : /root/soal_14.sh di setiap worker (Maki, Panda, Nanami, Todo, Kirara).
+### Soal 14 — Reverse Proxy dan Load Balancing
 
-[screenshoot]
+**SOAL:** Gunakan Geto sebagai reverse proxy untuk meneruskan request ke frontend Maki/Panda atau backend API.
 
-[screenshoot]
+**Solusi:** Geto (`10.72.4.20`) menerima request. Request halaman biasa diteruskan ke frontend pool Maki (`10.72.4.3`) dan Panda (`10.72.4.4`); request `/api` diteruskan ke backend Nanami (`10.72.4.31`), Todo (`10.72.4.32`), atau Kirara (`10.72.4.33`). Maki dan Panda perlu route balik melalui `10.72.4.1` agar bisa menjawab request dari jaringan lain.
 
-expected output yang muncul : Klien (Itadori) yang mencoba curl langsung ke IP Worker mendapatkan error 403 Forbidden. Namun jika diakses dengan benar melalui proxy, API mengembalikan JSON dengan parameter worker yang sesuai.
+**Script:** `soal_14.sh` — bagian Geto, frontend workers, backend workers, dan client. Nginx utama: `/etc/nginx/nginx.conf`; file PHP backend: `/var/www/api/index.php`.
 
-### Soal 15 — Internal Load Balancer API
-SOAL : Konfigurasi Geto sebagai internal load balancer yang membagi lalu lintas request secara proporsional ke API worker (Nanami dan Todo) dengan rasio beban 3:1.
-Solusi : Geto dipasang Nginx sebagai Reverse Proxy. Blok upstream api_cluster dibuat dengan mengarahkan traffic ke IP Nanami menggunakan atribut weight=3 dan ke IP Todo menggunakan atribut weight=1.
-Script : /root/soal_15.sh (di Geto), /etc/nginx/conf.d/geto-upstream.conf
+**Expected Output:**
 
-[screenshoot]
+```text
+HTTP/1.1 200 OK
+X-Served-By: Maki
+```
 
-[screenshoot]
+Request berikutnya dapat menunjukkan Panda. Untuk `/api`, hasilnya berupa JSON sukses dengan nama worker, misalnya Nanami atau Todo. Hasil terminal yang pernah kamu kirim menunjukkan kedua frontend membalas `200 OK` dan endpoint API berhasil.
 
-expected output yang muncul : Ketika dilakukan looping request puluhan kali dari client (Itadori), hasil perhitungan log menunjukkan respons dikembalikan oleh Nanami sekitar 3 kali lebih banyak daripada Todo (misal: 30 Nanami, 10 Todo).
+**Catatan:** skrip memuat konfigurasi server di `nginx.conf` sekaligus include ke `sites-enabled`; pastikan tidak ada server block duplikat atau beberapa `default_server`.
 
-### Soal 16 — Public Reverse Proxy & Path-Based Routing
-SOAL : Konfigurasi Gojo sebagai gerbang utama (Public Reverse Proxy) untuk melayani klien. Terapkan Path-Based Routing di mana akses ke path / (root) diarahkan ke cluster Web (Maki/Panda) dan path /api diarahkan ke internal LB (Geto).
-Solusi : Gojo dipasang Nginx. Dua blok location dikonfigurasi: location / melakukan proxy_pass ke upstream Web Cluster, dan location /api/ melakukan proxy_pass ke IP Geto.
-Script : /root/soal_16.sh (di Gojo), konfigurasi server block Nginx di Gojo.
+<img width="757" height="475" alt="3_14_FIXX_ITADORI KELARRRR" src="https://github.com/user-attachments/assets/9a0751b6-f5f1-4b98-b9f9-a5e8f184a7d2" />
 
-[screenshoot]
+### Soal 15 — Weighted Load Balancing 3:1
 
-[screenshoot]
+**SOAL:** Atur pembagian request API agar Nanami menerima bobot tiga kali Todo.
 
-expected output yang muncul : Client mengeksekusi curl [http://jujutsu.K17.com/](http://jujutsu.K17.com/) merespons isi HTML statis. Sementara curl [http://jujutsu.K17.com/api](http://jujutsu.K17.com/api) merespons output JSON dari backend.
+**Solusi:** Geto membuat upstream `api_cluster` dengan Nanami (`10.72.4.31`) berbobot 3 dan Todo (`10.72.4.32`) berbobot 1. Request API dari client dikirim ke Geto (`10.72.4.20`), lalu dibagi ke kedua backend.
 
-### Soal 17 — Real IP Forwarding & Security Headers
-SOAL : Pastikan IP asli klien diteruskan dari Gojo ke Geto hingga ke API Worker sehingga log database mencatat IP klien yang sebenarnya. Cegah manipulasi (spoofing) IP dari klien dengan mengabaikan header injeksi dari luar.
-Solusi : Gojo menginjeksi header X-Real-IP dan menimpa X-Forwarded-For. Geto menggunakan modul Nginx set_real_ip_from agar menerima IP klien asli dari Gojo dan meneruskannya lagi. API Worker melakukan hal serupa dari Geto.
-Script : /root/soal_17.sh (di Gojo, Geto, Nanami, Todo).
+**Script:** `soal_15.sh` — konfigurasi Nginx Geto di `/etc/nginx/nginx.conf`; tes request dijalankan dari Itadori.
 
-[screenshoot]
+**Expected Output:**
 
-[screenshoot]
+```json
+{"status":"success","worker":"Nanami"}
+{"status":"success","worker":"Todo"}
+```
 
-expected output yang muncul : Hasil akses dari Itadori memunculkan properti JSON client_ip: 10.72.2.10 (IP asli). Saat Itadori mencoba spoofing (curl -H "X-Forwarded-For: 1.1.1.1"), nilai client_ip tetap kebal dan mencatat IP 10.72.2.10 yang sah, lalu tersimpan aman di log database.
+Dalam kumpulan request yang cukup, Nanami seharusnya menerima lebih banyak request daripada Todo. Pengujian delapan request yang pernah kamu laporkan menghasilkan Nanami enam kali dan Todo dua kali, sesuai rasio 3:1 pada tes tersebut. Urutan respons tidak harus selalu berpola tetap.
 
-### Soal 18 — Failover API Worker
-SOAL : Konfigurasi Kirara sebagai worker cadangan. Jika Nanami dan Todo down secara bersamaan, traffic langsung dialihkan ke Kirara tanpa menampilkan error 502 Bad Gateway ke pengguna.
-Solusi : Pada konfigurasi upstream di Geto, Kirara (10.72.4.33) ditambahkan dengan atribut backup. Modul proxy_next_upstream dikonfigurasi untuk langsung melempar traffic yang gagal di primary worker (error/timeout) ke worker backup.
-Script : /root/soal_18.sh (di Geto), snippet proxy_next_upstream Nginx.
+<img width="619" height="142" alt="3_15 FIX BENER" src="https://github.com/user-attachments/assets/3fbb10a8-fb66-4c9a-ba02-0c7d7e441c6d" />
 
-[screenshoot]
 
-[screenshoot]
+### Soal 16 — Path-Based Routing melalui Gojo
 
-expected output yang muncul : Saat service Nginx/PHP-FPM di Nanami dan Todo dimatikan manual, request dari Itadori tidak menerima status HTTP 502. Klien menerima status 200 OK dengan properti JSON "worker":"Kirara". Ketika primary dinyalakan lagi, rasio otomatis normal ke Nanami/Todo.
+**SOAL:** Jadikan Gojo sebagai gateway publik yang memilih tujuan berdasarkan path: halaman web ke frontend dan `/api` ke Geto.
 
-### Soal 19 — Proxy Cache & Rate Limiting
-SOAL : Kurangi beban load balancer dengan mengaktifkan proxy cache (durasi 10 menit) di Gojo untuk endpoint Web. Terapkan Rate Limiting pada endpoint /api untuk mencegah DDoS, maksimal 10 request per detik (r/s).
-Solusi : Direktori /var/cache/nginx/gojo dikonfigurasi menggunakan proxy_cache_valid 200 10m untuk path /. Limitasi dibuat dengan zone $binary_remote_addr dengan parameter rate=10r/s burst=5 nodelay pada path /api.
-Script : /root/soal_19.sh (di Gojo).
+**Solusi:** Gojo (`10.72.1.4`) meneruskan request `/` ke Maki/Panda (`10.72.4.3` dan `.4`). Request `/api` diteruskan ke Geto (`10.72.4.20`), yang kemudian memilih backend API.
 
-[screenshoot]
+**Script:** `soal_16.sh` — konfigurasi Nginx Gojo: `/etc/nginx/nginx.conf`.
 
-[screenshoot]
+**Expected Output:**
 
-expected output yang muncul : Curl pertama ke URL statis menghasilkan header X-Cache-Status: MISS, sedangkan akses kedua menghasilkan HIT. Saat client melakukan looping request cepat ke /api, hanya sebagian awal yang berhasil (200), sisanya ditolak dan menghasilkan respons HTTP 429 Too Many Requests yang juga terbukti tercatat di error.log Gojo sebagai limiting requests.
+- Akses `/` menampilkan halaman frontend dari Maki atau Panda.
+- Akses `/api` mengembalikan JSON dari backend, misalnya Nanami atau Todo.
+- Nginx lolos `nginx -t` sebelum restart.
 
-### Soal 20 — Pengujian Kapasitas (Apache Benchmark)
-SOAL : Lakukan audit beban menggunakan Apache Benchmark (ab) dari Kusakabe dengan parameter -n 600 -c 30. Catat performa RPS dan Latensi untuk endpoint web (/) lalu bandingkan efek rate limiting ketika menguji endpoint API (/api). Bedakan jenis kegagalan melalui akses log Gojo.
-Solusi : Kusakabe dipasang modul apache2-utils. Skenario A (Web) dieksekusi, menghasilkan beban yang semuanya ditangani oleh Cache Gojo. Skenario B (API) dieksekusi dan bertabrakan dengan sistem pembatasan Rate Limit Nginx. Log Gojo diringkas menggunakan script log_summary.sh dengan manipulasi awk/grep.
-Script : /root/soal_20.sh (di Kusakabe, instalasi ab) dan /root/log_summary.sh (di Gojo).
+Tes yang pernah kamu kirim menunjukkan halaman Gojo berhasil dan pembagian API delapan request menghasilkan Nanami enam kali, Todo dua kali.\
 
-[screenshoot]
+<img width="959" height="594" alt="3_16_FIX BERHASIL ITADORI" src="https://github.com/user-attachments/assets/468d816d-6547-49e8-b4dd-01a35cd3d602" />
 
-[screenshoot]
 
-expected output yang muncul : Pada skenario web (/), hasil ab menampilkan Requests per Second (RPS) tinggi (>3000) dan Failed requests bernilai 0 dengan status log 100% cache=HIT. Pada skenario API (/api), RPS turun drastis dan muncul ratusan Failed requests. Log log_summary.sh membuktikan bahwa server worker tidak ada yang mati/error (5xx bernilai 0), dan ratusan kegagalan murni karena ditolak (429) oleh kebijakan limit_req dari Nginx.
+
+### Soal 17 — Meneruskan IP Client dan Mencatat Request
+
+**SOAL:** Teruskan alamat IP client melewati Gojo dan Geto hingga backend API, lalu simpan informasi request ke database Yaga.
+
+**Solusi:** Gojo mengirim `X-Real-IP` dan `X-Forwarded-For` ke Geto. Geto meneruskan IP asli tersebut ke API backend. PHP backend menyimpan `worker_name`, `client_ip`, `proxy_ip`, `user_agent`, dan `log_message` ke tabel `request_logs` di Yaga.
+
+**Script:** `soal_17.sh` — Nginx Gojo dan Geto, serta PHP di backend. File terkait: `/etc/nginx/nginx.conf` dan `/var/www/api/index.php`.
+
+**Expected Output:**
+
+```json
+{"status":"success","worker":"Nanami","client_ip":"..."}
+```
+
+Di database Yaga, baris request yang sama diharapkan menyimpan IP client pada `client_ip` dan alamat proxy Geto pada `proxy_ip`. Nilai `client_ip` bergantung pada node asal request; pengujian yang pernah dilaporkan mencatat client Gojo `10.72.1.4` dan proxy Geto `10.72.4.20`.
+
+<img width="958" height="563" alt="3_17_dari gojo" src="https://github.com/user-attachments/assets/07defec3-d3f6-4dc5-bf89-c353a9d629b2" />
+
+
+<img width="818" height="135" alt="3_17_dari yaga" src="https://github.com/user-attachments/assets/69f3677b-3678-41fd-989d-3b76187c6875" />
+
+
+### Soal 18 — API Backup dan Failover
+
+**SOAL:** Sediakan Kirara sebagai backend cadangan apabila Nanami dan Todo tidak bisa melayani request.
+
+**Solusi:** Geto mengatur upstream `api_cluster` dengan Nanami berbobot 3, Todo berbobot 1, dan Kirara (`10.72.4.33`) sebagai `backup`. Jika backend utama gagal, Nginx dapat mencoba Kirara. PHP Kirara mencatat kolom wajib request ke Yaga dan mengembalikan JSON.
+
+**Script:** `soal_18.sh` — PHP dan Nginx Kirara, konfigurasi upstream Geto, serta instruksi pengujian failover.
+
+**Expected Output:**
+
+```json
+{"status":"success","worker":"Kirara","client_ip":"10.72.2.10"}
+```
+
+Output itu sudah kamu dapat dari Itadori ketika Nanami dan Todo dihentikan; artinya request berhasil dialihkan ke backend cadangan Kirara. Hidupkan kembali Nginx di Nanami dan Todo setelah simulasi.
+
+<img width="959" height="566" alt="3_18_FIX hasil dari Itadori Dan worker" src="https://github.com/user-attachments/assets/c11b0be3-fa2c-4e85-87d8-cc39efa83600" />
+
+<img width="901" height="569" alt="3_18_FIX failover itadori" src="https://github.com/user-attachments/assets/52765d7d-2e8a-4527-861e-57c8da381aa4" />
+
+
+### Soal 19 — Proxy Cache dan Rate Limiting
+
+**SOAL:** Aktifkan cache pada halaman frontend dan batasi laju request ke API agar request berlebihan dapat ditolak.
+
+**Solusi:** Gojo menyimpan cache frontend di `/var/cache/nginx/jujutsu_cache`. Cache valid selama 10 menit untuk respons `200`/`302`. Endpoint `/api` dibatasi `10r/s` per IP dengan `burst=5 nodelay`; request berlebih dapat mendapat `503`.
+
+**Script:** `soal_19.sh` — konfigurasi Gojo di `/etc/nginx/nginx.conf`; pengujian dijalankan dari Itadori.
+
+**Expected Output:**
+
+```text
+X-Cache-Status: MISS
+X-Cache-Status: HIT
+```
+
+Gunakan URL unik yang sama dua kali agar tes menunjukkan cache baru diisi lalu digunakan. Request cepat ke API dapat menghasilkan campuran `200` dan `503`. Kamu sudah mengamati `200` serta `503`, dan header cache menunjukkan `HIT`.
+
+**Perlu dikonfirmasi:** tes langsung dari Geto ke Nanami, Todo, dan Kirara menghasilkan JSON yang benar, tetapi output API melalui Gojo sebelumnya sempat berisi teks tidak wajar di field `status`. Tes ulang isi JSON melalui Gojo sebelum demo; status `200` saja belum memastikan isi respons API benar.
+
+<img width="959" height="585" alt="3_19_FIX BENERR " src="https://github.com/user-attachments/assets/bba62645-0e29-4ebe-9489-5c9ed00a9aa7" />
+
+
+### Soal 20 — Benchmark dan Pemeriksaan Log
+
+**SOAL:** Uji banyak request ke halaman utama, ukur waktu request, dan amati efek rate limiting pada endpoint API melalui access log Gojo.
+
+**Solusi:** Dari Itadori/Kusakabe, skrip mengirim 100 request ke halaman utama dan 30 request cepat ke API. Di Gojo, access log digunakan untuk melihat status respons, termasuk request sukses dan yang ditolak oleh rate limit.
+
+**Script:** `soal_20.sh` — tes dari Itadori/Kusakabe; log di Gojo pada `/var/log/nginx/access.log`.
+
+**Expected Output:** benchmark menampilkan waktu total dari `time`; request API menampilkan kode status, yang dapat mencakup `200` dan `503` ketika limit terlampaui. Access log Gojo seharusnya mencatat status request tersebut.
+
+**Perlu diperbaiki sebelum demo:** kedua URL di skrip berisi typo `10.72..1.4`. Seharusnya `10.72.1.4`; jika tidak, tes benchmark dan API tidak menuju alamat Gojo yang benar.
+
+<img width="959" height="599" alt="3_20_FIX BENER ITADORI" src="https://github.com/user-attachments/assets/e1e151d3-2939-4292-ab1a-a924c9b5b15b" />
+
+<img width="938" height="563" alt="3_20_FIX BENER GOJO" src="https://github.com/user-attachments/assets/d7aca285-fdf4-4108-9234-fce973d23130" />
+
 
 ## REVISI 
 Hampir semuanya dari 11-20 mengalami revisi karena ketidak sesuaian hasil
