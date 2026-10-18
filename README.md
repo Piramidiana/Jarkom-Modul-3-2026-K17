@@ -185,33 +185,61 @@ Hasil: setelah kedua node di-restart, relay dan dhcpd berjalan tanpa perintah ma
 
 ### Soal 11–12 — DNS (Jude)
 
-### Soal 11 — DNS Master
-SOAL : Konfigurasi Utahime sebagai DNS Master untuk domain jujutsu.K17.com agar dapat mengarahkan lalu lintas dari jaringan klien menuju public load balancer (Gojo).
-Solusi : Utahime dikonfigurasi menggunakan BIND9 sebagai DNS Master dengan zone jujutsu.K17.com. File zone dikonfigurasi untuk mengatur A record domain utama ke IP Gojo (10.72.4.21).
-Script : /root/soal_11.sh (di Utahime), /etc/bind/named.conf.local, /etc/bind/jujutsu.k17.com
+### SOAL11:
+Konfigurasi Utahime sebagai DNS Master untuk domain jujutsu.K17.com agar dapat mengarahkan lalu lintas dari jaringan klien menuju public load balancer(Gojo).SOLUSI:Utahime dikonfigurasi menggunakan BIND9 sebagai DNS Master dengan zone jujutsu.K17.com. File zone mengatur A record domain utama ke IP Gojo(10.72.4.21).
 
-<img width="788" height="431" alt="3_11_FIX ITADORI" src="https://github.com/user-attachments/assets/4bdf9552-accc-4cc2-8853-32b872893210" />
+SCRIPT DAN FILE KONFIGURASI:
+Script: /root/soal_11.sh (dijalankan di Utahime)
+Konfigurasi zone: /etc/bind/named.conf.local
+File zone: /etc/bind/jujutsu/jujutsu.K17.com
 
+<img width="736" height="402" alt="3_11_FIX BENER ITADORI" src="https://github.com/user-attachments/assets/6bf476eb-1a4e-4a2c-b4c1-c297a07537f8" />
 
+<img width="788" height="431" alt="3_11_FIX ITADORI" src="https://github.com/user-attachments/assets/6baf452b-1c0f-42da-bafd-7d8bdc79101e" />
 
-expected output yang muncul : Hasil uji ping jujutsu.K17.com atau host jujutsu.K17.com dari client berhasil me-resolve ke alamat IP Gojo (10.72.4.21).
+expected output yang muncul : Hasil uji ping 
+;; ANSWER SECTION:
+jujutsu.K17.com.    604800    IN    A    10.72.4.21
 
 ### Soal 12 — DNS Slave
-SOAL : Konfigurasi Shoko sebagai DNS Slave untuk domain jujutsu.K17.com sebagai server cadangan apabila DNS Master (Utahime) mengalami kegagalan/mati.
-Solusi : Utahime dikonfigurasi untuk mengizinkan transfer zone (allow-transfer) ke IP Shoko. Shoko dikonfigurasi menggunakan BIND9 bertipe slave yang mengambil data zone dari master (Utahime).
-Script : /root/soal_12.sh (di Utahime & Shoko), /etc/bind/named.conf.local (di Shoko)
+**SOAL:** Konfigurasikan Utahime sebagai DNS untuk `jujutsu.K17.com`, agar nama domain menuju Gojo. Tambahkan juga alias `www`, reverse lookup, dan penerusan query domain luar. Solusi:Utahime (`10.72.1.2`) menjadi DNS Master. Forward zone mengarahkan domain utama ke Gojo (`10.72.1.4`) dan `www` menjadi CNAME ke domain utama. Reverse zone memetakan `10.72.1.4` kembali ke `jujutsu.K17.com`. Konfigurasi options menggunakan forwarder `192.168.122.1`.
 
-<img width="747" height="274" alt="3_12_ItadoriDIG" src="https://github.com/user-attachments/assets/b550db92-3d07-478c-8a3f-b8b09e801bbc" />
+**Script:** `soal_12.sh` — dijalankan/diterapkan di Utahime. File konfigurasi: `/etc/bind/jujutsu/jujutsu.K17.com`, `/etc/bind/jujutsu/10.72.1.rev`, `/etc/bind/named.conf.local`, dan `/etc/bind/named.conf.options`.
 
-<img width="803" height="235" alt="3_12_ItadoriDIG2" src="https://github.com/user-attachments/assets/039c8924-1612-413c-aa68-894d7fc1609b" />
+<img width="747" height="274" alt="3_12_ItadoriDIG" src="https://github.com/user-attachments/assets/a8d82714-9ce2-41ae-aefb-bf628b8553cc" />
 
-<img width="661" height="128" alt="3_12_ItadoriDIG3" src="https://github.com/user-attachments/assets/cf86ebde-21e6-4625-809f-f37f1d8b7ef3" />
+<img width="747" height="274" alt="3_12_ItadoriDIG" src="https://github.com/user-attachments/assets/06837f0e-6bee-414e-ba4d-ca98201c238d" />
 
+<img width="661" height="128" alt="3_12_ItadoriDIG3" src="https://github.com/user-attachments/assets/7ebb47fb-ab86-4493-89c8-b01bb015d376" />
 
-expected output yang muncul : Saat service bind9 di Utahime dimatikan secara paksa, client tetap berhasil melakukan resolve domain jujutsu.K17.com melalui Shoko yang mengambil alih proses DNS query.
+*Expected Output:**
+
+```text
+www.jujutsu.K17.com.    ...    IN    CNAME    jujutsu.K17.com.
+jujutsu.K17.com.        ...    IN    A        10.72.1.4
+```
+
+Untuk `dig -x 10.72.1.4`, jawaban PTR yang diharapkan adalah `jujutsu.K17.com`. Ping `google.com` menguji bahwa DNS forwarder dapat membantu resolusi domain luar. Perintah validasi zone di skrip juga seharusnya berakhir dengan `OK`.
+
 
 ### Soal 13 — Replikasi MariaDB
-SOAL : Kepala Sekolah Yaga dan Inumaki mendirikan database terpusat yang redundan agar log aktivitas kutukan tetap aman tersimpan. Konfigurasikan MariaDB pada yaga sebagai DB-Master dan inumaki sebagai DB-Slave. Buat database db_shibuya_<xxxx> beserta tabel request_logs di Master, aktifkan binary logging (log-bin, server-id), lalu hubungkan inumaki sebagai Slave yang menyalin data secara realtime dengan CHANGE MASTER TO. Berikan hak akses remote bagi seluruh node di Network 4, lalu buktikan replikasi berhasil dengan memasukkan data baru di Master dan memeriksa hasilnya di Slave.
+
+**SOAL:** Jadikan Yaga sebagai database utama dan Inumaki sebagai replika, sehingga perubahan database di Yaga dapat disalin ke Inumaki.
+
+**Solusi:** Yaga dikonfigurasi dengan `server-id=1`, binary log, dan user replikasi. Inumaki memakai `server-id=2`; lalu dihubungkan ke Yaga dengan `CHANGE MASTER TO`. Data uji dimasukkan di Yaga dan dicari di Inumaki.
+
+**Script:** `soal_13.sh` — konfigurasi MariaDB di Yaga dan Inumaki. File konfigurasi: `/etc/mysql/mariadb.conf.d/50-server.cnf`.
+
+**Expected Output:**
+
+```text
+Slave_IO_Running: Yes
+Slave_SQL_Running: Yes
+```
+
+Setelah insert uji di Yaga, query di Inumaki diharapkan menemukan baris `replication-test` yang sama.
+
+**Perlu dikonfirmasi:** bukti terakhir yang tercatat sebelumnya menunjukkan error replikasi `1593` akibat server ID yang sama, dan belum ada hasil akhir yang memastikan masalah itu sudah selesai. Selain itu, posisi log pada `CHANGE MASTER TO` harus mengikuti hasil `SHOW MASTER STATUS` terkini, bukan otomatis memakai nilai contoh dari skrip. Pembuatan tabel di bagian awal skrip juga belum mencantumkan semua kolom wajib yang dipakai pada insert uji.
 
 <img width="658" height="143" alt="3_13_Inumaki sinkron dengan yaga" src="https://github.com/user-attachments/assets/c07ad313-9277-4340-a1e9-141c0b17ef51" />
 
@@ -220,7 +248,7 @@ SOAL : Kepala Sekolah Yaga dan Inumaki mendirikan database terpusat yang redunda
 <img width="674" height="523" alt="3_13_YES INUMAKI" src="https://github.com/user-attachments/assets/a6ef4e70-a601-4c3a-988b-adabf65e5690" />
 
 
-yaga (master): `server-id=1`, `log-bin`, `bind-address=0.0.0.0`, database `db_shibuya_K17`, tabel `request_logs`, user replikasi `repl@10.72.4.12`, user aplikasi `k17@10.72.4.%`. inumaki (slave): `server-id=2`, `read_only`, `CHANGE MASTER TO` dari `mysql-bin.000001` posisi 4. Folder `/var/lib/mysql` dan `/etc/mysql` dibuat persisten di GNS3.
+
 
 Script: `perquest-scripts/soal_13.sh`, `nodes/yaga/soal_13_master.sh`, `nodes/inumaki/soal_13_slave.sh`.
 
