@@ -309,3 +309,8 @@ Script : /root/soal_20.sh (di Kusakabe, instalasi ab) dan /root/log_summary.sh (
 [screenshoot]
 
 expected output yang muncul : Pada skenario web (/), hasil ab menampilkan Requests per Second (RPS) tinggi (>3000) dan Failed requests bernilai 0 dengan status log 100% cache=HIT. Pada skenario API (/api), RPS turun drastis dan muncul ratusan Failed requests. Log log_summary.sh membuktikan bahwa server worker tidak ada yang mati/error (5xx bernilai 0), dan ratusan kegagalan murni karena ditolak (429) oleh kebijakan limit_req dari Nginx.
+
+## REVISI 
+Hampir semuanya dari 11-20 mengalami revisi karena ketidak sesuaian hasil
+
+kesalahan pada hasil yang di terutama yang paling vital adalah nomor 13 yang seharusnya saya yang menghandle malah dihandle oleh Piramidiana, 
